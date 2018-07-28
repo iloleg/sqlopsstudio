@@ -42,6 +42,7 @@ import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IClipboardService } from 'vs/platform/clipboard/common/clipboardService';
+import { SaveGridViewState } from 'sql/base/browser/ui/table/plugins/saveGridViewState.plugin';
 
 export const QUERY_SELECTOR: string = 'query-component';
 
@@ -380,7 +381,7 @@ export class QueryComponent extends GridParentComponent implements OnInit, OnDes
 				};
 			}))
 		};
-		self.plugins.push([rowNumberColumn, new AutoColumnSize(), new AdditionalKeyBindings()]);
+		self.plugins.push([rowNumberColumn, new AutoColumnSize(), new AdditionalKeyBindings(), new SaveGridViewState(this.queryParameters.onSaveViewState, this.queryParameters.onRestoreViewState, () => this.slickgrids.toArray()[resultSet.id])]);
 		self.dataSets.push(dataSet);
 
 		// check if the resultset is for a query plan
@@ -665,38 +666,40 @@ export class QueryComponent extends GridParentComponent implements OnInit, OnDes
 	}
 
 	private saveViewState(): void {
-		let gridSelections = this.slickgrids.map(grid => grid.getSelectedRanges());
+		// let gridSelections = this.slickgrids.map(grid => grid.getSelectedRanges());
 		let resultsScrollElement = (this._resultsScrollBox.nativeElement as HTMLElement);
 		let resultsScroll = resultsScrollElement.scrollTop;
 		let messagePaneScroll = (this._messagesContainer.nativeElement as HTMLElement).scrollTop;
-		let slickGridScrolls = this._slickgridElements.map(element => {
-			// Get the slick grid's viewport element and save its scroll position
-			let scrollElement = (element.nativeElement as HTMLElement).children[0].children[3];
-			return {
-				vertical: scrollElement.scrollTop,
-				horizontal: scrollElement.scrollLeft
-			};
-		});
+		// let slickGridScrolls = this._slickgridElements.map(element => {
+		// 	// Get the slick grid's viewport element and save its scroll position
+		// 	let scrollElement = (element.nativeElement as HTMLElement).children[0].children[3];
+		// 	return {
+		// 		vertical: scrollElement.scrollTop,
+		// 		horizontal: scrollElement.scrollLeft
+		// 	};
+		// });
 
 		this.savedViewState = {
-			gridSelections,
+			// gridSelections,
 			messagePaneScroll,
 			resultsScroll,
-			slickGridScrolls
+			// slickGridScrolls
+			gridSelections: undefined,
+			slickGridScrolls: undefined
 		};
 	}
 
 	private restoreViewState(): void {
 		if (this.savedViewState) {
-			this.slickgrids.forEach((grid, index) => grid.selection = this.savedViewState.gridSelections[index]);
+			// this.slickgrids.forEach((grid, index) => grid.selection = this.savedViewState.gridSelections[index]);
 			(this._resultsScrollBox.nativeElement as HTMLElement).scrollTop = this.savedViewState.resultsScroll;
 			(this._messagesContainer.nativeElement as HTMLElement).scrollTop = this.savedViewState.messagePaneScroll;
-			this._slickgridElements.forEach((element, index) => {
-				let scrollElement = (element.nativeElement as HTMLElement).children[0].children[3];
-				let savedScroll = this.savedViewState.slickGridScrolls[index];
-				scrollElement.scrollTop = savedScroll.vertical;
-				scrollElement.scrollLeft = savedScroll.horizontal;
-			});
+			// this._slickgridElements.forEach((element, index) => {
+			// 	let scrollElement = (element.nativeElement as HTMLElement).children[0].children[3];
+			// 	let savedScroll = this.savedViewState.slickGridScrolls[index];
+			// 	scrollElement.scrollTop = savedScroll.vertical;
+			// 	scrollElement.scrollLeft = savedScroll.horizontal;
+			// });
 			this.savedViewState = undefined;
 		}
 	}

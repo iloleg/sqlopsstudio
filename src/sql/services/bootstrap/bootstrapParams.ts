@@ -10,13 +10,16 @@ import { ConnectionContextKey } from 'sql/parts/connection/common/connectionCont
 import { IBootstrapParams } from './bootstrapService';
 import { Event } from 'vs/base/common/event';
 
-export interface IQueryComponentParams extends IBootstrapParams {
-	dataService: DataService;
+export interface IEditorComponentParams extends IBootstrapParams {
 	onSaveViewState: Event<void>;
 	onRestoreViewState: Event<void>;
 }
 
-export interface IEditDataComponentParams extends IBootstrapParams {
+export interface IQueryComponentParams extends IEditorComponentParams {
+	dataService: DataService;
+}
+
+export interface IEditDataComponentParams extends IEditorComponentParams {
 	dataService: DataService;
 }
 

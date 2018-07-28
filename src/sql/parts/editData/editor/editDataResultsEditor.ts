@@ -9,6 +9,7 @@ import { Builder } from 'vs/base/browser/builder';
 import { EditorOptions } from 'vs/workbench/common/editor';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { getZoomLevel } from 'vs/base/browser/browser';
+import { Event } from 'vs/base/common/event';
 import { Configuration } from 'vs/editor/browser/config/configuration';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
@@ -30,6 +31,8 @@ export class EditDataResultsEditor extends BaseEditor {
 	public static AngularSelectorString: string = 'slickgrid-container.slickgridContainer';
 	protected _input: EditDataResultsInput;
 	protected _rawOptions: BareResultsGridInfo;
+	private _saveViewStateEvent: Event<void>;
+	private _restoreViewStateEvent: Event<void>;
 
 	constructor(
 		@ITelemetryService telemetryService: ITelemetryService,
@@ -71,6 +74,11 @@ export class EditDataResultsEditor extends BaseEditor {
 		return TPromise.wrap<void>(null);
 	}
 
+	public setViewStateChangeEvents(onRestoreViewStateEvent: Event<void>, onSaveViewStateEvent: Event<void>) {
+		this._restoreViewStateEvent = onRestoreViewStateEvent;
+		this._saveViewStateEvent = onSaveViewStateEvent;
+	}
+
 	private _applySettings() {
 		if (this.input && this.input.container) {
 			Configuration.applyFontInfoSlow(this.getContainer(), this._rawOptions);
@@ -109,7 +117,11 @@ export class EditDataResultsEditor extends BaseEditor {
 		// Otherwise many components will be left around and be subscribed
 		// to events from the backing data service
 		const parent = input.container;
-		let params: IEditDataComponentParams = { dataService: dataService };
+		let params: IEditDataComponentParams = {
+			dataService: dataService,
+			onRestoreViewState: this._restoreViewStateEvent,
+			onSaveViewState: this._saveViewStateEvent
+		};
 		bootstrapAngular(this._instantiationService,
 			EditDataModule,
 			parent,

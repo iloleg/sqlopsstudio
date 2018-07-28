@@ -13,7 +13,7 @@ import 'vs/css!sql/parts/grid/media/slickGrid';
 import 'vs/css!./media/editData';
 
 import { ElementRef, ChangeDetectorRef, OnInit, OnDestroy, Component, Inject, forwardRef, EventEmitter } from '@angular/core';
-import { IGridDataRow, VirtualizedCollection } from 'angular2-slickgrid';
+import { IGridDataRow, VirtualizedCollection, ISlickRange } from 'angular2-slickgrid';
 
 import { IGridDataSet } from 'sql/parts/grid/common/interfaces';
 import * as Services from 'sql/parts/grid/services/sharedServices';
@@ -81,6 +81,12 @@ export class EditDataComponent extends GridParentComponent implements OnInit, On
 	public overrideCellFn: (rowNumber, columnId, value?, data?) => string;
 	public loadDataFunction: (offset: number, count: number) => Promise<IGridDataRow[]>;
 
+	private _savedViewState: {
+		scrollTop: number;
+		scrollLeft: number;
+		selection: ISlickRange[];
+	};
+
 	constructor(
 		@Inject(forwardRef(() => ElementRef)) el: ElementRef,
 		@Inject(forwardRef(() => ChangeDetectorRef)) cd: ChangeDetectorRef,
@@ -98,6 +104,8 @@ export class EditDataComponent extends GridParentComponent implements OnInit, On
 		this._el.nativeElement.className = 'slickgridContainer';
 		this.dataService = params.dataService;
 		this.actionProvider = this.instantiationService.createInstance(EditDataGridActionProvider, this.dataService, this.onGridSelectAll(), this.onDeleteRow(), this.onRevertRow());
+		params.onSaveViewState(() => this.saveViewState());
+		params.onRestoreViewState(() => this.restoreViewState());
 	}
 
 	/**
@@ -577,5 +585,32 @@ export class EditDataComponent extends GridParentComponent implements OnInit, On
 		return rowCount > this._defaultNumShowingRows
 			? (this._defaultNumShowingRows + 1) * this._rowHeight + 10
 			: this.getMaxHeight(rowCount);
+	}
+
+	private saveViewState(): void {
+		let grid = this.slickgrids.toArray()[0];
+		let privateGrid = (grid as any)._grid;
+		// This is just a struct not an HTML element but it probably gives what i want. unfortunately saveViewState not firing right now.
+		// Test it out with the regular results grid?
+		let viewport = (privateGrid.getViewport() as HTMLElement);
+		this._savedViewState = {
+			scrollLeft: viewport.scrollLeft,
+			scrollTop: viewport.scrollTop,
+			selection: this.slickgrids.toArray()[0].getSelectedRanges()
+		};
+	}
+
+	private restoreViewState(): void {
+		if (this.currentCell) {
+			this.focusCell(this.currentCell.row, this.currentCell.column, true);
+		}
+		let grid = this.slickgrids.toArray()[0];
+		let privateGrid = (grid as any)._grid;
+		let viewport = (privateGrid.getViewport() as HTMLElement);
+		if (this._savedViewState) {
+			viewport.scrollLeft = this._savedViewState.scrollLeft;
+			viewport.scrollTop = this._savedViewState.scrollTop;
+			this._savedViewState = undefined;
+		}
 	}
 }

@@ -14,6 +14,7 @@ import { Builder } from 'vs/base/browser/builder';
 import { EditorOptions, EditorInput } from 'vs/workbench/common/editor';
 import { BaseEditor } from 'vs/workbench/browser/parts/editor/baseEditor';
 import { Position, IEditorControl, IEditor } from 'vs/platform/editor/common/editor';
+import { Emitter } from 'vs/base/common/event';
 
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
@@ -78,6 +79,8 @@ export class EditDataEditor extends BaseEditor {
 
 	private _queryEditorVisible: IContextKey<boolean>;
 	private hideQueryResultsView = false;
+
+	private _resultViewStateChangeEmitters = new Map<EditDataResultsInput, { onSaveViewState: Emitter<void>; onRestoreViewState: Emitter<void> }>();
 
 	constructor(
 		@ITelemetryService _telemetryService: ITelemetryService,
@@ -231,6 +234,12 @@ export class EditDataEditor extends BaseEditor {
 	 */
 	public setInput(newInput: EditDataInput, options?: EditorOptions): TPromise<void> {
 		let oldInput = <EditDataInput>this.input;
+		if (oldInput) {
+			let stateChangeEmitters = this._resultViewStateChangeEmitters.get(oldInput.results);
+			if (stateChangeEmitters) {
+				stateChangeEmitters.onSaveViewState.fire();
+			}
+		}
 		if (!newInput.setup) {
 			this._initialized = false;
 			this._register(newInput.updateTaskbarEvent((owner) => this._updateTaskbar(owner)));
@@ -528,7 +537,17 @@ export class EditDataEditor extends BaseEditor {
 	 */
 	private _onResultsEditorCreated(resultsEditor: EditDataResultsEditor, resultsInput: EditDataResultsInput, options: EditorOptions): TPromise<void> {
 		this._resultsEditor = resultsEditor;
-		return this._resultsEditor.setInput(resultsInput, options);
+		if (!this._resultViewStateChangeEmitters.has(resultsInput)) {
+			this._resultViewStateChangeEmitters.set(resultsInput, {
+				onRestoreViewState: new Emitter<void>(),
+				onSaveViewState: new Emitter<void>()
+			});
+		}
+		let stateChangeEmitters = this._resultViewStateChangeEmitters.get(resultsInput);
+		this._resultsEditor.setViewStateChangeEvents(stateChangeEmitters.onRestoreViewState.event, stateChangeEmitters.onSaveViewState.event);
+		return this._resultsEditor.setInput(resultsInput, options).then(() => {
+			stateChangeEmitters.onRestoreViewState.fire();
+		});
 	}
 
 	/**
